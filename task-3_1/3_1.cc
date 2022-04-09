@@ -1,61 +1,66 @@
-#include <assert.h>
+#include <cassert>
 #include <iostream>
 #include <sstream>
+
+void TestQueue();
+void TestContest();
+void Run(std::istream& in, std::ostream& out);
 
 class Queue {
  public:
   Queue() : head(nullptr), tail(nullptr) {}
-  ~Queue() {
-    while (!Empty()) {
-      PopFront();
-    }
-  }
-  Queue(Queue const&) = delete;             // Копирование
+  ~Queue();
+  Queue(Queue const&) = delete;  // Конструктор Копирование
   Queue& operator=(Queue const&) = delete;  // Присваивание
 
-  void PushBack(int val) {
-    Node* node = new Node(val);
-    if (Empty()) {
-      head = tail = node;
-    } else {
-      tail->next = node;
-      tail = node;
-    }
-  }
-  int PopFront() {
-    if (Empty()) {
-      return -1;
-    }
+  void PushBack(int const& val);
+  int PopFront();
 
-    Node* node = head;
-    int val = node->val;
-
-    head = head->next;
-    delete node;
-
-    if (head == nullptr) {
-      tail = nullptr;
-    }
-    return val;
-  }
-
-  bool Empty() const { return head == tail && head == nullptr; }
+  bool IsEmpty() const { return head == tail && head == nullptr; }
 
  private:
   struct Node {
     Node* next;
     int val;
 
-    Node(int val) : next(nullptr), val(val) {}
+    Node(int const& val) : next(nullptr), val(val) {}
   };
 
   Node* head;
   Node* tail;
 };
 
-void TestQueue();
-void TestContest();
-void Run(std::istream& in, std::ostream& out);
+Queue::~Queue() {
+  while (head != nullptr) {
+    Node* node = head;
+    head = head->next;
+    delete node;
+  }
+}
+
+int Queue::PopFront() {
+  assert(!IsEmpty());
+
+  Node* node = head;
+  int val = node->val;
+  head = head->next;
+  delete node;
+
+  if (head == nullptr) {
+    tail = nullptr;
+  }
+  return val;
+}
+
+void Queue::PushBack(int const& val) {
+  Node* node = new Node(val);
+  if (IsEmpty()) {
+    head = tail = node;
+  } else {
+    tail->next = node;
+    tail = node;
+  }
+}
 
 int main() {
   TestQueue();
@@ -75,13 +80,17 @@ void Run(std::istream& in, std::ostream& out) {
     in >> a >> b;
     switch (a) {
       case 2:
-        result &= (q.PopFront() == b) ? true : false;
+        if (!q.IsEmpty()) {
+          result &= (q.PopFront() == b) ? true : false;
+        } else {
+          result &= (-1 == b) ? true : false;
+        }
         break;
       case 3:
         q.PushBack(b);
         break;
       default:
-        break;
+        assert(false);
     }
   }
   out << (result ? "YES" : "NO") << std::endl;
@@ -115,11 +124,11 @@ void TestContest() {
 
 void TestQueue() {
   Queue q;
-  assert(q.Empty());
+  assert(q.IsEmpty());
 
   q.PushBack(1);
   assert(q.PopFront() == 1);
-  assert(q.Empty());
+  assert(q.IsEmpty());
 
   for (int i = 0; i < 100; ++i) {
     q.PushBack(i);
@@ -127,7 +136,7 @@ void TestQueue() {
   for (int i = 0; i < 100; ++i) {
     assert(q.PopFront() == i);
   }
-  assert(q.Empty());
+  assert(q.IsEmpty());
 
   std::cout << "TestQueue: SUCCESS" << std::endl;
 }
