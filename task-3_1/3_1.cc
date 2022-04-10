@@ -6,9 +6,87 @@ void TestQueue();
 void TestContest();
 void Run(std::istream& in, std::ostream& out);
 
+class CycleDynamicBuffer {
+ public:
+  CycleDynamicBuffer() {}
+  ~CycleDynamicBuffer();
+
+  CycleDynamicBuffer(CycleDynamicBuffer const&) = delete;
+  CycleDynamicBuffer& operator=(CycleDynamicBuffer const&) = delete;
+
+  void AddItem(int const& val);
+  int RemoveItem();
+  bool IsEmpty() const { return size_ == 0; }
+
+ private:
+  int* dynamic_array_ = nullptr;
+  size_t head_index_ = 0;
+  size_t tail_index_ = 0;
+  size_t size_ = 0;
+  size_t max_size_ = 0;
+
+  void Reallocation(size_t const& new_max_size);
+  size_t ShiftIndex(size_t const& index, unsigned int shift) {
+    return (index + shift) % max_size_;
+  }
+};
+
+CycleDynamicBuffer::~CycleDynamicBuffer() {
+  if (dynamic_array_ != nullptr) {
+    delete[] dynamic_array_;
+  }
+}
+
+void CycleDynamicBuffer::AddItem(int const& val) {
+  if (IsEmpty()) {
+    size_ = 1;
+    max_size_ = 1;
+    dynamic_array_ = new int[max_size_];
+    dynamic_array_[0] = val;
+  } else {
+    if (size_ == max_size_) {
+      Reallocation(max_size_ * 2);
+    }
+    ++size_;
+    tail_index_ = ShiftIndex(tail_index_, 1);
+    dynamic_array_[tail_index_] = val;
+  }
+}
+
+int CycleDynamicBuffer::RemoveItem() {
+  assert(!IsEmpty());
+  int val = dynamic_array_[head_index_];
+  if (--size_ == 0) {
+    return val;
+  }
+  head_index_ = ShiftIndex(head_index_, 1);
+
+  if (max_size_ / size_ >= 4) {
+    Reallocation(max_size_ / 2);
+  }
+
+  return val;
+}
+
+void CycleDynamicBuffer::Reallocation(size_t const& new_max_size) {
+  int* new_array = new int[new_max_size];
+  //  Выравниваем в новом массиве в начало от головы до хвоста
+  for (size_t i = 0; i < size_; ++i) {
+    // Сдвигаемся по изновальному массиву от головы (head_index_) на количество
+    // действительных элементов (size_), ограничивая индекс по size_
+    new_array[i] = dynamic_array_[ShiftIndex(head_index_, i)];
+  }
+  max_size_ = new_max_size;
+  head_index_ = 0;
+  tail_index_ = size_ - 1;
+
+  delete[] dynamic_array_;
+  dynamic_array_ = new_array;
+}
+
 class Queue {
  public:
-  Queue() : head(nullptr), tail(nullptr) {}
+  Queue() : buffer(new CycleDynamicBuffer()) {}
   ~Queue();
   Queue(Queue const&) = delete;  // Конструктор Копирование
   Queue& operator=(Queue const&) = delete;  // Присваивание
@@ -16,50 +94,25 @@ class Queue {
   void PushBack(int const& val);
   int PopFront();
 
-  bool IsEmpty() const { return head == tail && head == nullptr; }
+  bool IsEmpty() const { return buffer->IsEmpty(); }
 
  private:
-  struct Node {
-    Node* next;
-    int val;
-
-    Node(int const& val) : next(nullptr), val(val) {}
-  };
-
-  Node* head;
-  Node* tail;
+  CycleDynamicBuffer* buffer;
 };
 
 Queue::~Queue() {
-  while (head != nullptr) {
-    Node* node = head;
-    head = head->next;
-    delete node;
+  if (buffer != nullptr) {
+    delete buffer;
   }
 }
 
 int Queue::PopFront() {
   assert(!IsEmpty());
-
-  Node* node = head;
-  int val = node->val;
-  head = head->next;
-  delete node;
-
-  if (head == nullptr) {
-    tail = nullptr;
-  }
-  return val;
+  return buffer->RemoveItem();
 }
 
 void Queue::PushBack(int const& val) {
-  Node* node = new Node(val);
-  if (IsEmpty()) {
-    head = tail = node;
-  } else {
-    tail->next = node;
-    tail = node;
-  }
+  buffer->AddItem(val);
 }
 
 int main() {
