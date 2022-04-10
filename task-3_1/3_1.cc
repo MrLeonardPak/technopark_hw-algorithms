@@ -2,10 +2,6 @@
 #include <iostream>
 #include <sstream>
 
-void TestQueue();
-void TestContest();
-void Run(std::istream& in, std::ostream& out);
-
 class CycleDynamicBuffer {
  public:
   CycleDynamicBuffer() {}
@@ -124,13 +120,6 @@ void Queue::PushBack(int const& val) {
   buffer_->AddItem(val);
 }
 
-int main() {
-  TestQueue();
-  TestContest();
-  // Run(std::cin, std::cout);
-  return 0;
-}
-
 void Run(std::istream& in, std::ostream& out) {
   int n = 0;
   Queue q;
@@ -201,4 +190,11 @@ void TestQueue() {
   assert(q.IsEmpty());
 
   std::cout << "TestQueue: SUCCESS" << std::endl;
+}
+
+int main() {
+  TestQueue();
+  TestContest();
+  // Run(std::cin, std::cout);
+  return 0;
 }
