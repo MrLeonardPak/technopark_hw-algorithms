@@ -95,7 +95,7 @@ size_t CycleDynamicBuffer::ShiftIndex(size_t const& index, unsigned int shift) {
 
 void Run(std::istream& in, std::ostream& out) {
   int n = 0;
-  CycleDynamicBuffer q(100000);
+  CycleDynamicBuffer q(1);
   in >> n;
   bool result = true;
   for (int i = 0; i < n; ++i) {
