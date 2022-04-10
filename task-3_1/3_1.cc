@@ -4,28 +4,35 @@
 
 class CycleDynamicBuffer {
  public:
-  CycleDynamicBuffer() {}
+  CycleDynamicBuffer(size_t start_size);
   ~CycleDynamicBuffer();
 
   CycleDynamicBuffer(CycleDynamicBuffer const&) = delete;
   CycleDynamicBuffer& operator=(CycleDynamicBuffer const&) = delete;
 
-  void AddItem(int const& val);
-  int RemoveItem();
+  void PushBack(int const& val);
+  int PopFront();
   bool IsEmpty() const { return size_ == 0; }
 
  private:
-  int* dynamic_array_ = nullptr;
+  size_t kStartSize = 1;
+  int kReallocMultiplication = 2;
+
   size_t head_index_ = 0;
   size_t tail_index_ = 0;
   size_t size_ = 0;
   size_t max_size_ = 0;
-  size_t kStartSize = 1;
-  int kReallocMultiplication = 2;
+  int* dynamic_array_ = nullptr;
 
   void Reallocation(size_t const& new_max_size);
   size_t ShiftIndex(size_t const& index, unsigned int shift);
 };
+
+CycleDynamicBuffer::CycleDynamicBuffer(size_t start_size)
+    : kStartSize(start_size),
+      size_(0),
+      max_size_(kStartSize),
+      dynamic_array_(new int[max_size_]) {}
 
 CycleDynamicBuffer::~CycleDynamicBuffer() {
   if (dynamic_array_ != nullptr) {
@@ -33,15 +40,12 @@ CycleDynamicBuffer::~CycleDynamicBuffer() {
   }
 }
 
-void CycleDynamicBuffer::AddItem(int const& val) {
-  // В случае пустого буффера создается динамический массив
+void CycleDynamicBuffer::PushBack(int const& val) {
+  // Для пустого буффера не сдвигаем tail_index_
   if (IsEmpty()) {
-    size_ = 1;
-    max_size_ = kStartSize;
-    dynamic_array_ = new int[max_size_];
-    dynamic_array_[0] = val;
+    ++size_;
+    dynamic_array_[tail_index_] = val;
   } else {
-    // Реалоцируем в kReallocMultiplication раза при достижении максимума
     if (size_ == max_size_) {
       Reallocation(max_size_ * kReallocMultiplication);
     }
@@ -51,7 +55,7 @@ void CycleDynamicBuffer::AddItem(int const& val) {
   }
 }
 
-int CycleDynamicBuffer::RemoveItem() {
+int CycleDynamicBuffer::PopFront() {
   assert(!IsEmpty());
   int val = dynamic_array_[head_index_];
   --size_;
@@ -89,40 +93,9 @@ size_t CycleDynamicBuffer::ShiftIndex(size_t const& index, unsigned int shift) {
   return (index + shift) % max_size_;
 }
 
-class Queue {
- public:
-  Queue() : buffer_(new CycleDynamicBuffer()) {}
-  ~Queue();
-  Queue(Queue const&) = delete;  // Конструктор Копирование
-  Queue& operator=(Queue const&) = delete;  // Присваивание
-
-  void PushBack(int const& val);
-  int PopFront();
-
-  bool IsEmpty() const { return buffer_->IsEmpty(); }
-
- private:
-  CycleDynamicBuffer* buffer_;
-};
-
-Queue::~Queue() {
-  if (buffer_ != nullptr) {
-    delete buffer_;
-  }
-}
-
-int Queue::PopFront() {
-  assert(!IsEmpty());
-  return buffer_->RemoveItem();
-}
-
-void Queue::PushBack(int const& val) {
-  buffer_->AddItem(val);
-}
-
 void Run(std::istream& in, std::ostream& out) {
   int n = 0;
-  Queue q;
+  CycleDynamicBuffer q(100000);
   in >> n;
   bool result = true;
   for (int i = 0; i < n; ++i) {
@@ -169,12 +142,72 @@ void TestContest() {
     Run(in, out);
     assert(out.str() == "NO\n");
   }
+  {
+    std::stringstream in;
+    std::stringstream out;
+    in << "1000000" << std::endl;
+    for (size_t i = 0; i < 500000; ++i) {
+      in << "3 " << i << std::endl;
+    }
+    for (size_t i = 0; i < 500000; ++i) {
+      in << "2 " << i << std::endl;
+    }
+
+    Run(in, out);
+    assert(out.str() == "YES\n");
+  }
+  {
+    std::stringstream in;
+    std::stringstream out;
+    in << "800" << std::endl;
+    for (size_t i = 0; i < 200; ++i) {
+      in << "3 " << i << std::endl;
+    }
+    for (size_t i = 0; i < 100; ++i) {
+      in << "2 " << i << std::endl;
+    }
+    for (size_t i = 0; i < 200; ++i) {
+      in << "3 " << i << std::endl;
+    }
+    for (size_t i = 100; i < 200; ++i) {
+      in << "2 " << i << std::endl;
+    }
+    for (size_t i = 0; i < 200; ++i) {
+      in << "2 " << i << std::endl;
+    }
+
+    Run(in, out);
+    assert(out.str() == "YES\n");
+  }
+  {
+    std::stringstream in;
+    std::stringstream out;
+    in << "800" << std::endl;
+    for (size_t i = 0; i < 200; ++i) {
+      in << "3 " << i << std::endl;
+    }
+    for (size_t i = 0; i < 100; ++i) {
+      in << "2 " << i << std::endl;
+    }
+    for (size_t i = 0; i < 200; ++i) {
+      in << "3 " << i << std::endl;
+    }
+    for (size_t i = 100; i < 200; ++i) {
+      in << "2 " << i << std::endl;
+    }
+    for (size_t i = 0; i < 200; ++i) {
+      in << "2 " << i << std::endl;
+    }
+    in << "2 -1" << std::endl;
+    Run(in, out);
+    assert(out.str() == "YES\n");
+  }
 
   std::cout << "TestLogic: SUCCESS" << std::endl;
 }
 
 void TestQueue() {
-  Queue q;
+  CycleDynamicBuffer q(1);
   assert(q.IsEmpty());
 
   q.PushBack(1);
