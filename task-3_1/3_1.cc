@@ -24,11 +24,11 @@ class CycleDynamicBuffer {
   size_t tail_index_ = 0;
   size_t size_ = 0;
   size_t max_size_ = 0;
+  size_t kStartSize = 1;
+  int kReallocMultiplication = 2;
 
   void Reallocation(size_t const& new_max_size);
-  size_t ShiftIndex(size_t const& index, unsigned int shift) {
-    return (index + shift) % max_size_;
-  }
+  size_t ShiftIndex(size_t const& index, unsigned int shift);
 };
 
 CycleDynamicBuffer::~CycleDynamicBuffer() {
@@ -38,14 +38,16 @@ CycleDynamicBuffer::~CycleDynamicBuffer() {
 }
 
 void CycleDynamicBuffer::AddItem(int const& val) {
+  // В случае пустого буффера создается динамический массив
   if (IsEmpty()) {
     size_ = 1;
-    max_size_ = 1;
+    max_size_ = kStartSize;
     dynamic_array_ = new int[max_size_];
     dynamic_array_[0] = val;
   } else {
+    // Реалоцируем в kReallocMultiplication раза при достижении максимума
     if (size_ == max_size_) {
-      Reallocation(max_size_ * 2);
+      Reallocation(max_size_ * kReallocMultiplication);
     }
     ++size_;
     tail_index_ = ShiftIndex(tail_index_, 1);
@@ -56,13 +58,15 @@ void CycleDynamicBuffer::AddItem(int const& val) {
 int CycleDynamicBuffer::RemoveItem() {
   assert(!IsEmpty());
   int val = dynamic_array_[head_index_];
-  if (--size_ == 0) {
+  --size_;
+  if (IsEmpty()) {
     return val;
   }
   head_index_ = ShiftIndex(head_index_, 1);
-
-  if (max_size_ / size_ >= 4) {
-    Reallocation(max_size_ / 2);
+  // Уменьшаем динамический массив только в том случае, если действующие
+  // элементы занимают меньше, чем половину от уменьшенного массива
+  if ((int)(max_size_ / size_) >= kReallocMultiplication * 2) {
+    Reallocation(max_size_ / kReallocMultiplication);
   }
 
   return val;
@@ -70,10 +74,9 @@ int CycleDynamicBuffer::RemoveItem() {
 
 void CycleDynamicBuffer::Reallocation(size_t const& new_max_size) {
   int* new_array = new int[new_max_size];
-  //  Выравниваем в новом массиве в начало от головы до хвоста
+  //  Заносим децствующие элементы в начало нового массива по порядку от head_
+  //  до tail_
   for (size_t i = 0; i < size_; ++i) {
-    // Сдвигаемся по изновальному массиву от головы (head_index_) на количество
-    // действительных элементов (size_), ограничивая индекс по size_
     new_array[i] = dynamic_array_[ShiftIndex(head_index_, i)];
   }
   max_size_ = new_max_size;
@@ -84,9 +87,15 @@ void CycleDynamicBuffer::Reallocation(size_t const& new_max_size) {
   dynamic_array_ = new_array;
 }
 
+size_t CycleDynamicBuffer::ShiftIndex(size_t const& index, unsigned int shift) {
+  // index сдвигается вперед на shift, значение index зациклено и ограничего
+  // значением max_size_
+  return (index + shift) % max_size_;
+}
+
 class Queue {
  public:
-  Queue() : buffer(new CycleDynamicBuffer()) {}
+  Queue() : buffer_(new CycleDynamicBuffer()) {}
   ~Queue();
   Queue(Queue const&) = delete;  // Конструктор Копирование
   Queue& operator=(Queue const&) = delete;  // Присваивание
@@ -94,25 +103,25 @@ class Queue {
   void PushBack(int const& val);
   int PopFront();
 
-  bool IsEmpty() const { return buffer->IsEmpty(); }
+  bool IsEmpty() const { return buffer_->IsEmpty(); }
 
  private:
-  CycleDynamicBuffer* buffer;
+  CycleDynamicBuffer* buffer_;
 };
 
 Queue::~Queue() {
-  if (buffer != nullptr) {
-    delete buffer;
+  if (buffer_ != nullptr) {
+    delete buffer_;
   }
 }
 
 int Queue::PopFront() {
   assert(!IsEmpty());
-  return buffer->RemoveItem();
+  return buffer_->RemoveItem();
 }
 
 void Queue::PushBack(int const& val) {
-  buffer->AddItem(val);
+  buffer_->AddItem(val);
 }
 
 int main() {
