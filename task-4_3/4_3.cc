@@ -66,6 +66,5 @@ class Heap {
 };
 
 int main() {
-  TestDynamicArray();
   return 0;
 }
