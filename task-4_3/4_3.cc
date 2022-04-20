@@ -23,36 +23,6 @@
 #include <cassert>
 #include <iostream>
 
-// XXX: Объявления
-
-template <typename T>
-class DynamicArray {
- public:
-  DynamicArray(size_t start_size);
-
-  DynamicArray(DynamicArray const&) = delete;
-  DynamicArray(DynamicArray&&) = delete;
-
-  DynamicArray& operator=(DynamicArray const&) = delete;
-  DynamicArray& operator=(DynamicArray&&) = delete;
-
-  ~DynamicArray();
-
-  T& operator[](int index);
-
-  size_t MaxSize() const { return max_size_; }
-
- private:
-  const size_t kStartSize;
-  const int kReallocMultiplication;
-
-  size_t size_;
-  size_t max_size_;
-  T* dynamic_array;
-
-  void Reallocation();
-};
-
 template <typename T>
 struct DefaultComparator {
   bool operator()(T const& l, T const& r) const { return l < r; }
@@ -72,31 +42,28 @@ class Heap {
   ~Heap();
 
   T const& Top() const;
-  void Pop();
+  void Pop() {
+    assert(!IsEmpty());
+    T val = buf[0];
+    buf[0] = buf[heap_size - 1];
+    --heap_size;
+    if (!IsEmpty()) {
+      SiftDown();
+    }
+  }
 
   void Push(T const&);
 
-  bool IsEmpty() const;
+  bool IsEmpty() const { return heap_size == 0; }
   size_t Size() const;
 
  private:
   T* buf;
   size_t buffer_size;
   size_t heap_size;
+
+  void SiftDown();
 };
-
-// XXX: Определения
-
-template <typename T>
-DynamicArray<T>::DynamicArray(size_t start_size) {}
-
-void TestDynamicArray() {
-  DynamicArray<int> arr(2);
-  for (size_t i = 0; i < 10; ++i) {
-    arr[i] = i;
-  }
-  assert(arr.MaxSize() == 16);
-}
 
 int main() {
   TestDynamicArray();
