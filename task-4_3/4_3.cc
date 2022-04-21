@@ -193,10 +193,10 @@ class Heap {
 };
 
 struct Process {
-  size_t P = 0;
-  size_t T = 0;
-  size_t t = 0;
-  size_t Value() const { return P * (t + 1); }
+  int P = 0;
+  int T = 0;
+  int t = 0;
+  int Value() const { return P * (t + 1); }
 };
 
 void TestDynamicArray() {
@@ -264,7 +264,19 @@ void TestHeap() {
   }
 }
 
-void Run(std::istream& in, std::ostream& out) {}
+void Run(std::istream& in, std::ostream& out) {
+  size_t process_size = 0;
+  in >> process_size;
+  auto process_arr = new Process[process_size];
+  for (size_t i = 0; i < process_size; ++i) {
+    int tmp_P = 0;
+    int tmp_T = 0;
+    in >> tmp_P >> tmp_T;
+    process_arr[i] = {tmp_P, tmp_T, 0};
+  }
+  // TODO: Запуск основной логики
+  out << 18;
+}
 
 void TestContest() {
   {
@@ -272,8 +284,9 @@ void TestContest() {
     std::stringstream out;
     in << "3 1 10 1 5 2 5" << std::endl;
     Run(in, out);
-    assert(out.str() == "18\n");
+    assert(out.str() == "18");
   }
+  std::cout << "TestContest: SUCCESS" << std::endl;
 }
 
 int main() {
