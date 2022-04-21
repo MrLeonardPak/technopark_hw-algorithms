@@ -38,10 +38,8 @@ class DynamicArray {
   }
 
   DynamicArray(DynamicArray const&) = delete;
-  DynamicArray(DynamicArray&&) = delete;
 
   DynamicArray& operator=(DynamicArray const&) = delete;
-  DynamicArray& operator=(DynamicArray&&) = delete;
 
   ~DynamicArray() {
     if (buffer_ != nullptr) {
@@ -116,10 +114,8 @@ class Heap {
   };
 
   Heap(Heap const&) = delete;
-  Heap(Heap&&) = delete;
 
   Heap& operator=(Heap const&) = delete;
-  Heap& operator=(Heap&&) = delete;
 
   ~Heap() { delete buf_; }
 
@@ -199,9 +195,24 @@ struct Process {
   int Value() const { return P * (t + 1); }
 };
 
+template <typename Comporator>
+size_t ExecuteTasks(Heap<Process, Comporator>* heap) {
+  size_t switchings = 0;
+  while (!heap->IsEmpty()) {
+    switchings++;
+    Process top = heap->Top();
+    heap->Pop();
+    top.t += top.P;
+    if (top.t < top.T) {
+      heap->Push(top);
+    }
+  }
+  return switchings;
+}
+
 void TestDynamicArray() {
   {
-    DynamicArray<int> arr{1};
+    DynamicArray<int> arr(1);
     arr[0] = 1;
     try {
       arr[1] = 1;
@@ -210,7 +221,7 @@ void TestDynamicArray() {
     }
   }
   {
-    DynamicArray<size_t> arr{16};
+    DynamicArray<size_t> arr(16);
     for (size_t i = 0; i < 16; ++i) {
       arr[i] = i;
     }
@@ -226,7 +237,7 @@ void TestDynamicArray() {
     }
   }
   {
-    DynamicArray<size_t> arr{16};
+    DynamicArray<size_t> arr(16);
     for (size_t i = 0; i < 4; ++i) {
       arr[i] = i;
     }
@@ -274,23 +285,13 @@ void Run(std::istream& in, std::ostream& out) {
     in >> tmp_P >> tmp_T;
     process_arr[i] = {tmp_P, tmp_T, 0};
   }
-  // TODO: Запуск основной логики
 
   Heap heap(process_arr, process_size, [](Process const& l, Process const& r) {
     return l.Value() < r.Value();
   });
 
-  size_t switchings = 0;
-  while (!heap.IsEmpty()) {
-    switchings++;
-    Process top = heap.Top();
-    heap.Pop();
-    top.t += top.P;
-    if (top.t < top.T) {
-      heap.Push(top);
-    }
-  }
-  out << switchings;
+  out << ExecuteTasks(&heap);
+  delete[] process_arr;
 }
 
 void TestContest() {
@@ -305,8 +306,9 @@ void TestContest() {
 }
 
 int main() {
-  TestDynamicArray();
-  TestHeap();
-  TestContest();
+  // TestDynamicArray();
+  // TestHeap();
+  // TestContest();
+  Run(std::cin, std::cout);
   return 0;
 }
