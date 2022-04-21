@@ -275,7 +275,22 @@ void Run(std::istream& in, std::ostream& out) {
     process_arr[i] = {tmp_P, tmp_T, 0};
   }
   // TODO: Запуск основной логики
-  out << 18;
+
+  Heap heap(process_arr, process_size, [](Process const& l, Process const& r) {
+    return l.Value() < r.Value();
+  });
+
+  size_t switchings = 0;
+  while (!heap.IsEmpty()) {
+    switchings++;
+    Process top = heap.Top();
+    heap.Pop();
+    top.t += top.P;
+    if (top.t < top.T) {
+      heap.Push(top);
+    }
+  }
+  out << switchings;
 }
 
 void TestContest() {
