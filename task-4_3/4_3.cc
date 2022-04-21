@@ -24,6 +24,7 @@
 #include <exception>
 #include <iostream>
 #include <limits>
+#include <sstream>
 
 template <typename T>
 class DynamicArray {
@@ -191,6 +192,13 @@ class Heap {
   }
 };
 
+struct Process {
+  size_t P = 0;
+  size_t T = 0;
+  size_t t = 0;
+  size_t Value() const { return P * (t + 1); }
+};
+
 void TestDynamicArray() {
   {
     DynamicArray<int> arr{1};
@@ -256,8 +264,21 @@ void TestHeap() {
   }
 }
 
+void Run(std::istream& in, std::ostream& out) {}
+
+void TestContest() {
+  {
+    std::stringstream in;
+    std::stringstream out;
+    in << "3 1 10 1 5 2 5" << std::endl;
+    Run(in, out);
+    assert(out.str() == "18\n");
+  }
+}
+
 int main() {
   TestDynamicArray();
   TestHeap();
+  TestContest();
   return 0;
 }
