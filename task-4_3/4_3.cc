@@ -33,7 +33,7 @@ class DynamicArray {
   DynamicArray(size_t start_size, T const* buffer)
       : size_(start_size), buffer_(new T[size_]) {
     for (size_t i = 0; i < size_; ++i) {
-      buffer_[i] = std::move(buffer[i]);
+      buffer_[i] = buffer[i];
     }
   }
 
@@ -108,7 +108,7 @@ class Heap {
  public:
   Heap(T const* buffer, size_t size, Comparator comp = Comparator())
       : heap_size_(size),
-        buf_(new DynamicArray(heap_size_, buffer)),
+        buf_(new DynamicArray<T>(heap_size_, buffer)),
         comp_(comp) {
     BuildHeap();
   };
