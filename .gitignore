@@ -12,3 +12,6 @@
 
 # Ignore build folder
 */build
+
+# Ignore tests
+**/test**.**
