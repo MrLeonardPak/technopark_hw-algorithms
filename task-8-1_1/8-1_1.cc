@@ -22,24 +22,20 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-
-size_t StrHash(std::string const& data) {
-  size_t hash = 0;
-  for (char i : data) {
-    hash = hash * 13 + i;
-  }
-  return hash;
-}
-
-static constexpr size_t kBucketsCount[] = {7,   17,   37,   73,   149,  251,
-                                           509, 1021, 2027, 5003, 10837};
+#include <vector>
 
 template <typename T>
 struct Hash;
 
 template <>
 struct Hash<std::string> {
-  size_t operator()(std::string const& str) const { return StrHash(str); }
+  size_t operator()(std::string const& str) const {
+    size_t hash = 0;
+    for (char c : str) {
+      hash = hash * 137 + c;
+    }
+    return hash;
+  }
 };
 
 template <typename T>
@@ -51,129 +47,165 @@ template <typename Key, typename Hash = Hash<Key>, typename Equal = Equal<Key>>
 class HashSet {
  public:
   HashSet(Hash hash = Hash(), Equal equal = Equal())
-      : buffer_(nullptr),
-        items_count_(0),
-        buckets_count_(0),
-        size_idx_(0),
-        hash_(hash),
-        equal_(equal) {}
+      : hasher_(hash), equal_(equal) {}
 
-  ~HashSet() {
-    for (size_t i = 0; i < buckets_count_; ++i) {
-      Node* cur = buffer_[i];
-      while (cur != nullptr) {
-        Node* tmp = cur;
-        cur = cur->next;
-        delete tmp;
-      }
-    }
-    delete[] buffer_;
-  }
+  HashSet(HashSet const&) = delete;
+  HashSet(HashSet&&) = delete;
+
+  HashSet& operator=(HashSet const&) = delete;
+  HashSet& operator=(HashSet&&) = delete;
+
+  ~HashSet() = default;
 
   bool Find(Key const& key) const {
-    if (buffer_ == nullptr) {
+    if (buffer_.empty()) {
       return false;
     }
 
-    size_t bucket_idx = hash_(key) % buckets_count_;
-    Node* cur = buffer_[bucket_idx];
-    while (cur != nullptr) {
-      if (equal_(key, cur->key)) {
-        return true;
+    size_t hash = hasher_(key) % buffer_.size();
+    for (size_t i = 0; i < buffer_.size(); ++i) {
+      Item item = buffer_[hash];
+      switch (item.state) {
+        case Item::BUSY:
+          if (item.key == key) {
+            return true;
+          }
+          break;
+        case Item::EMPTY:
+          return false;
+        default:
+          break;
       }
-      cur = cur->next;
+      // Квадратичное пробирование
+      hash = (hash + i) % buffer_.size();
     }
 
     return false;
   }
 
   bool Insert(Key const& key) {
-    if (Find(key)) {
-      return false;  // Дубликаты запрещены
-    }
-
-    if ((buffer_ == nullptr) ||
-        (items_count_ > buckets_count_ * kMaxLoadFactor)) {
+    if ((buffer_.empty()) || (items_count_ >= kFillFactor * buffer_.size())) {
       Grow();
     }
 
-    size_t bucket_idx = hash_(key) % buckets_count_;
-    buffer_[bucket_idx] = new Node(buffer_[bucket_idx], key);
-    ++items_count_;
-    return true;
+    size_t abs_hash = hasher_(key);
+    size_t hash = abs_hash % buffer_.size();
+    size_t del_idx = buffer_.size();
+    for (size_t i = 0; i < buffer_.size(); ++i) {
+      Item& item = buffer_[hash];
+      switch (item.state) {
+        case Item::BUSY:
+          if (item.key == key) {
+            return false;
+          }
+          break;
+        case Item::EMPTY:
+          if (del_idx == buffer_.size()) {
+            item = Item(key, abs_hash);
+          } else {
+            buffer_[del_idx] = Item(key, abs_hash);
+          }
+          ++items_count_;
+          return true;
+        case Item::DEL:
+          del_idx = (del_idx == buffer_.size()) ? hash : del_idx;
+          break;
+        default:
+          break;
+      }
+      // Квадратичное пробирование
+      hash = (hash + i) % buffer_.size();
+    }
+    // Тк делается перехэширование по items_count_, а он хранит количество
+    // существующих элементов (BUSY+DEL), то сюда дойти теоритически невозможно
+    // (тк будет перехеширование), поэтому лучше выкинуть исключение
+    throw std::logic_error(
+        "Прошли весь цикл при добавление, а место не нашли!");
   }
 
   bool Erase(Key const& key) {
-    if (buffer_ == nullptr) {
+    if (buffer_.empty()) {
       return false;
     }
 
-    size_t bucket_idx = hash_(key) % buckets_count_;
-    Node* cur = buffer_[bucket_idx];
-    Node** prev = &buffer_[bucket_idx];
-    while (cur != nullptr) {
-      if (equal_(key, cur->key)) {
-        *prev = cur->next;
-        --items_count_;
-        delete cur;
-        return true;
+    size_t hash = hasher_(key) % buffer_.size();
+    for (size_t i = 0; i < buffer_.size(); ++i) {
+      Item& item = buffer_[hash];
+      switch (item.state) {
+        case Item::BUSY:
+          if (item.key == key) {
+            item.state = Item::DEL;
+            ++del_items_count_;
+            return true;
+          }
+          break;
+        case Item::EMPTY:
+          return false;
+        case Item::DEL:
+          break;
+        default:
+          break;
       }
-      prev = &cur->next;
-      cur = cur->next;
+      // Квадратичное пробирование
+      hash = (hash + i) % buffer_.size();
     }
-
     return false;
   }
 
-  bool Is_Empty() const { return items_count_ == 0; }
-  size_t get_size() const { return items_count_; }
-
  private:
-  struct Node {
-    Node* next;
+  struct Item {
     Key key;
+    size_t hash;
+    enum State { EMPTY, BUSY, DEL } state;
 
-    Node(Node* next, Key const& key) : next(next), key(key) {}
+    Item() = default;
+
+    Item(Key const& key, size_t const& hash)
+        : key(key), hash(hash), state(BUSY) {}
   };
 
-  Node** buffer_;
-  size_t items_count_;
-  size_t buckets_count_;
-  size_t size_idx_;
-  Hash hash_;
+  std::vector<Item> buffer_;
+  size_t items_count_ = 0;
+  size_t del_items_count_ = 0;
+  Hash hasher_;
   Equal equal_;
-  static constexpr size_t kMaxLoadFactor = 7;
+  size_t constexpr static kMaxLoadFactor = 7;
+  size_t constexpr static kStartSize = 8;
+  float constexpr static kFillFactor = 0.75;
 
   void Grow() {
-    Node** old_buffer = buffer_;
-    size_t old_buckets_count = buckets_count_;
-
-    buckets_count_ = kBucketsCount[size_idx_++];
-    buffer_ = new Node*[buckets_count_];
-
-    for (size_t i = 0; i < buckets_count_; ++i) {
-      buffer_[i] = nullptr;
+    if (buffer_.empty()) {
+      buffer_.resize(kStartSize);
+      return;
     }
 
-    for (size_t i = 0; i < old_buckets_count; ++i) {
-      Node* cur = old_buffer[i];
-      while (cur != nullptr) {
-        size_t bucket_idx = hash_(cur->key) % buckets_count_;
-        Node* tmp = cur;
-        cur = cur->next;
+    size_t new_size = buffer_.size() * 2;
+    std::vector<Item> new_buffer(new_size);
+    for (size_t i = 0; i < buffer_.size(); ++i) {
+      if (buffer_[i].state == Item::BUSY) {
+        size_t new_hash = buffer_[i].hash % new_size;
+        // Ищем место по новому хешу
+        size_t hash = new_hash;
+        for (size_t i = 0;
+             (i < new_size) && (new_buffer[hash].state == Item::BUSY); ++i) {
+          // Квадратичное пробирование
+          hash = (hash + i) % new_size;
+        }
+        new_hash = hash;
 
-        tmp->next = buffer_[bucket_idx];
-        buffer_[bucket_idx] = tmp;
+        new_buffer[new_hash] = buffer_[i];
       }
-
-      delete[] old_buffer;
     }
+
+    buffer_ = std::move(new_buffer);
+    items_count_ -= del_items_count_;
+    del_items_count_ = 0;
   }
 };
 
 void Run(std::istream& in, std::ostream& out) {
-  static constexpr char kSuccess[] = "OK";
-  static constexpr char kFail[] = "FAIL";
+  char constexpr static kSuccess[] = "OK";
+  char constexpr static kFail[] = "FAIL";
 
   char operation = 0;
   std::string key;
