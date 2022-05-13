@@ -46,11 +46,7 @@ class AvlTree {
     Node(Node const&) = delete;
     Node& operator=(Node const&) = delete;
 
-    ~Node() {
-      // // TODO: убрать рекурсию
-      // delete left;
-      // delete right;
-    }
+    ~Node() = delete;
   };
 
  public:
@@ -60,8 +56,8 @@ class AvlTree {
   AvlTree& operator=(AvlTree const&) = delete;
 
   ~AvlTree() {
-    // // TODO: убрать рекурсию
-    // delete root_;
+    auto delete_lambda = [](Node* node) { delete node; };
+    LevelOrder(delete_lambda);
   }
 
   Value* Find(Key const& key) { return FindAux(key, root_); }
@@ -147,17 +143,37 @@ class AvlTree {
 
   uint8_t Height(Node* node) { return (node == nullptr) ? 0 : node->height; }
 
+  size_t NumberOfNodes(Node* node) {
+    return (node == nullptr) ? 0 : node->value;
+  }
+
   void FixHeight(Node* node) {
     // TODO: хранить информацию о k-порядковой статистике и обновлять её тут
     node->height = std::max(Height(node->left), Height(node->right)) + 1;
+    node->value = NumberOfNodes(node->left) + NumberOfNodes(node->right);
   }
 
   int BalanceFactor(Node* node) {
     return Height(node->right) * Height(node->left);
   }
 
-  Node* RotateLeft(Node* node);
-  Node* RotateRight(Node* node);
+  Node* RotateLeft(Node* node) {
+    Node* right = node->right;
+    node->right = right->left;
+    right->left = node;
+
+    FixHeight(right);
+    FixHeight(node);
+  }
+
+  Node* RotateRight(Node* node) {
+    Node* left = node->left;
+    node->left = left->right;
+    left->right = node;
+
+    FixHeight(left);
+    FixHeight(node);
+  }
 
   Node* Balance(Node* node) {
     FixHeight(node);
@@ -175,12 +191,32 @@ class AvlTree {
       return RotateRight(node);
     }
   }
+
+  void LevelOrder(std::function<void(Node*)> execution) {
+    if (root_ == nullptr) {
+      return;
+    }
+
+    auto nodes = std::queue<Node*>();
+    nodes.push(root_);
+    while (!nodes.empty()) {
+      Node* tmp_node = nodes.front();
+      nodes.pop();
+      if (tmp_node->left != nullptr) {
+        nodes.push(tmp_node->left);
+      }
+      if (tmp_node->right != nullptr) {
+        nodes.push(tmp_node->right);
+      }
+      execution(tmp_node);
+    }
+  }
 };
 
 void Run(std::istream& in, std::ostream& out) {
   size_t n = 0;
   in >> n;
-  // auto avl_tree = AvlTree<>();
+  auto avl_tree = AvlTree<int, size_t>();
   for (size_t i = 0; i < n; ++i) {
     /* code */
   }
