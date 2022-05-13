@@ -1,7 +1,12 @@
 /**
  * @file 9-2_4.cc
  * @author Leonard Pak
- * @brief
+ * @brief Дано число N < 10^6 и последовательность целых чисел из [-2^31..2^31]
+ * длиной N. Требуется построить бинарное дерево, заданное наивным порядком
+ * вставки. Т.е., при добавлении очередного числа K в дерево с корнем root, если
+ * root→Key ≤ K, то узел K добавляется в правое поддерево root; иначе в левое
+ * поддерево root. Требования: Рекурсия запрещена. Решение должно поддерживать
+ * передачу функции сравнения снаружи.
  * @version 0.1
  * @date 2022-05-13
  *
@@ -9,6 +14,7 @@
  *
  */
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <queue>
 #include <sstream>
@@ -24,20 +30,54 @@ class Tree {
     Node* left = nullptr;
     Node* right = nullptr;
     T value = {};
+    Node(T const& val) : value(val) {}
+    ~Node() = default;
   };
 
  public:
   Tree(Comparator comp = Comparator()) : comp_(comp) {}
-  ~Tree() = default;
 
-  void Push(T const& value) {
-    if (root_ == nullptr) {
-      root_ = new Node<T>{.value = value};
-      return;
-    }
-    }
+  Tree(Tree const&) = delete;
+  Tree& operator=(Tree const&) = delete;
 
-  void LevelOrder() {
+  ~Tree() {
+    auto delete_lambda = [](Node* node) { delete node; };
+    LevelOrderAux(delete_lambda);
+  }
+
+  void Insert(T const& value) {
+    Node* node = root_;
+    Node* parent = nullptr;
+    while (node != nullptr) {
+      parent = node;
+      if (comp_(value, node->value)) {
+        node = node->left;
+      } else {
+        node = node->right;
+      }
+    }
+    node = new Node(value);
+    if (parent == nullptr) {
+      root_ = node;
+    } else {
+      if (comp_(node->value, parent->value)) {
+        parent->left = node;
+      } else {
+        parent->right = node;
+      }
+    }
+  }
+
+  void LevelOrder(std::function<void(T const&)> execution) {
+    LevelOrderAux([execution](Node* node) { execution(node->value); });
+  }
+
+ private:
+  Node* root_ = nullptr;
+  size_t size_ = 0;
+  Comparator comp_;
+
+  void LevelOrderAux(std::function<void(Node*)> execution) {
     if (root_ == nullptr) {
       return;
     }
@@ -47,20 +87,15 @@ class Tree {
     while (!nodes.empty()) {
       Node* tmp_node = nodes.front();
       nodes.pop();
-      nodes.std::cout << tmp_node->value << '\n';
       if (tmp_node->left != nullptr) {
         nodes.push(tmp_node->left);
       }
       if (tmp_node->right != nullptr) {
         nodes.push(tmp_node->right);
       }
+      execution(tmp_node);
     }
   }
-
- private:
-  Node* root_ = nullptr;
-  size_t size_ = 0;
-  Comparator comp_;
 };
 
 void Run(std::istream& in, std::ostream& out) {
@@ -68,7 +103,12 @@ void Run(std::istream& in, std::ostream& out) {
   in >> n;
   auto tree = Tree<int>();
   for (size_t i = 0; i < n; ++i) {
+    int a = 0;
+    in >> a;
+    tree.Insert(a);
   }
+  auto out_lambda = [&out](int const& value) { out << value << ' '; };
+  tree.LevelOrder(out_lambda);
 }
 
 void TestContest() {
@@ -77,54 +117,55 @@ void TestContest() {
     std::stringstream out;
     in << "3 2 1 3" << std::endl;
     Run(in, out);
-    assert(out.str() == "2 1 3");
+    assert(out.str() == "2 1 3 ");
   }
   {
     std::stringstream in;
     std::stringstream out;
     in << "3 1 2 3" << std::endl;
     Run(in, out);
-    assert(out.str() == "1 2 3");
+    assert(out.str() == "1 2 3 ");
   }
   {
     std::stringstream in;
     std::stringstream out;
     in << "3 3 1 2" << std::endl;
     Run(in, out);
-    assert(out.str() == "3 1 2");
+    assert(out.str() == "3 1 2 ");
   }
   {
     std::stringstream in;
     std::stringstream out;
     in << "4 3 1 4 2" << std::endl;
     Run(in, out);
-    assert(out.str() == "3 1 4 2");
+    assert(out.str() == "3 1 4 2 ");
   }
   {
     std::stringstream in;
     std::stringstream out;
     in << "10 10 5 4 7 9 8 6 3 2 1" << std::endl;
     Run(in, out);
-    assert(out.str() == "10 5 4 7 3 6 9 2 8 1");
+    assert(out.str() == "10 5 4 7 3 6 9 2 8 1 ");
   }
   {
     std::stringstream in;
     std::stringstream out;
     in << "10 9 8 6 10 4 3 2 5 1 7" << std::endl;
     Run(in, out);
-    assert(out.str() == "9 8 10 6 4 7 3 5 2 1");
+    assert(out.str() == "9 8 10 6 4 7 3 5 2 1 ");
   }
   {
     std::stringstream in;
     std::stringstream out;
     in << "10 1 7 10 9 4 3 8 5 2 6" << std::endl;
     Run(in, out);
-    assert(out.str() == "1 7 4 10 3 5 9 2 6 8");
+    assert(out.str() == "1 7 4 10 3 5 9 2 6 8 ");
   }
   std::cout << "TestContest: SUCCESS" << std::endl;
 }
 
 int main() {
-  Run(std::cin, std::cout);
+  TestContest();
+  // Run(std::cin, std::cout);
   return 0;
 }
