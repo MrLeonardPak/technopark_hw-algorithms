@@ -14,7 +14,9 @@
  *
  */
 #include <cassert>
+#include <functional>
 #include <iostream>
+#include <queue>
 #include <sstream>
 
 template <typename T>
@@ -30,23 +32,21 @@ struct DefaultComparator {
   }
 };
 
-template <typename Key,
-          typename Value,
-          typename Comparator = DefaultComparator<Value>>
+template <typename Key, typename Comparator = DefaultComparator<Key>>
 class AvlTree {
   struct Node {
     Node* left = nullptr;
     Node* right = nullptr;
     Key key{};
-    Value value{};
+    size_t node_count = 1;
     uint8_t height = 1;
 
-    Node(Key const& key, Value const& value) : key(key), value(value) {}
+    Node(Key const& key) : key(key) {}
 
     Node(Node const&) = delete;
     Node& operator=(Node const&) = delete;
 
-    ~Node() = delete;
+    ~Node() = default;
   };
 
  public:
@@ -60,11 +60,9 @@ class AvlTree {
     LevelOrder(delete_lambda);
   }
 
-  Value* Find(Key const& key) { return FindAux(key, root_); }
+  void Insert(Key const& key) { root_ = InsertAux(key, root_); }
 
-  void Insert(Key const& key, Value const& value) {
-    root_ = InsertAux(key, value, root_);
-  }
+  Key GetKth(size_t const& kth) { return GetKthAux(kth, root_); }
 
   void Erase(Key const& key) { root_ = EraseAux(key, root_); }
 
@@ -72,29 +70,15 @@ class AvlTree {
   Node* root_ = nullptr;
   Comparator comp_;
 
-  Value* FindAux(Key const& key, Node* node) {
+  Node* InsertAux(Key const& key, Node* node) {
     if (node == nullptr) {
-      return nullptr;
+      return new Node(key);
     }
     int cmp_res = comp_(key, node->key);
     if (cmp_res == -1) {  // <
-      return FindAux(key, node->left);
-    }
-    if (cmp_res == 1) {  // >
-      return FindAux(key, node->right);
-    }
-    return &node->value;
-  }
-
-  Node* InsertAux(Key const& key, Value const& value, Node* node) {
-    if (node == nullptr) {
-      return new Node(key, value);
-    }
-    int cmp_res = comp_(key, node->key);
-    if (cmp_res == -1) {  // <
-      node->left = InsertAux(key, value, node->left);
+      node->left = InsertAux(key, node->left);
     } else if (cmp_res == 1) {  // >
-      node->right = InsertAux(key, value, node->right);
+      node->right = InsertAux(key, node->right);
     }
     return Balance(node);
   }
@@ -117,44 +101,50 @@ class AvlTree {
         return left;
       }
 
-      // TODO: Сделать вместо FindMin + RemoveMin одну функцию FindAndRemoveMin
-      Node* min_node = FindMin(right);
-      min_node->right = RemoveMin(right);
+      Node* min_node = FindAndRemoveMin(right);
       min_node->left = left;
       return Balance(min_node);
     }
     return Balance(node);
   }
 
-  Node* FindMin(Node* node) {
-    if (node->left == nullptr) {
-      return node;
-    }
-    return FindMin(node->left);
+  Node* FindMinChild(Node* node) {
+    // Необходимо вручную уменьшить число, тк не каждаю их нод пройдет
+    // балансировку
+    --node->node_count;
+    Node* child_node = node->left;
+    return (child_node->left == nullptr) ? node : FindMinChild(child_node);
   }
 
-  Node* RemoveMin(Node* node) {
-    if (node->left == nullptr) {
-      return node->right;
+  Node* FindAndRemoveMin(Node* node) {
+    Node* min_node = nullptr;
+    if (node->left != nullptr) {
+      // Ищем ноду, чей левый ребенок минимальный
+      Node* prev_node = FindMinChild(node);
+      min_node = prev_node->left;
+      // Удаляем минимальную ноду
+      prev_node->left = min_node->right;
+      // Поднимаем наверх минимальную ноду
+      min_node->right = node;
+    } else {
+      min_node = node;
     }
-    node->left = RemoveMin(node->left);
-    return Balance(node);
+    return min_node;
   }
 
   uint8_t Height(Node* node) { return (node == nullptr) ? 0 : node->height; }
 
-  size_t NumberOfNodes(Node* node) {
-    return (node == nullptr) ? 0 : node->value;
+  size_t NodeCount(Node* node) {
+    return (node == nullptr) ? 0 : node->node_count;
   }
 
-  void FixHeight(Node* node) {
-    // TODO: хранить информацию о k-порядковой статистике и обновлять её тут
+  void Fix(Node* node) {
     node->height = std::max(Height(node->left), Height(node->right)) + 1;
-    node->value = NumberOfNodes(node->left) + NumberOfNodes(node->right);
+    node->node_count = NodeCount(node->left) + NodeCount(node->right) + 1;
   }
 
   int BalanceFactor(Node* node) {
-    return Height(node->right) * Height(node->left);
+    return Height(node->right) - Height(node->left);
   }
 
   Node* RotateLeft(Node* node) {
@@ -162,8 +152,10 @@ class AvlTree {
     node->right = right->left;
     right->left = node;
 
-    FixHeight(right);
-    FixHeight(node);
+    Fix(node);
+    Fix(right);
+
+    return right;
   }
 
   Node* RotateRight(Node* node) {
@@ -171,12 +163,14 @@ class AvlTree {
     node->left = left->right;
     left->right = node;
 
-    FixHeight(left);
-    FixHeight(node);
+    Fix(node);
+    Fix(left);
+
+    return left;
   }
 
   Node* Balance(Node* node) {
-    FixHeight(node);
+    Fix(node);
 
     int bf = BalanceFactor(node);
     if (bf == 2) {
@@ -190,6 +184,18 @@ class AvlTree {
       }
       return RotateRight(node);
     }
+    return node;
+  }
+
+  Key GetKthAux(size_t const& kth, Node* node) {
+    size_t left_children_count = NodeCount(node->left);
+    if (left_children_count > kth) {
+      return GetKthAux(kth, node->left);
+    }
+    if (left_children_count < kth) {
+      return GetKthAux(kth - (left_children_count + 1), node->right);
+    }
+    return node->key;
   }
 
   void LevelOrder(std::function<void(Node*)> execution) {
@@ -216,9 +222,16 @@ class AvlTree {
 void Run(std::istream& in, std::ostream& out) {
   size_t n = 0;
   in >> n;
-  auto avl_tree = AvlTree<int, size_t>();
+  auto avl_tree = AvlTree<int>();
   for (size_t i = 0; i < n; ++i) {
-    /* code */
+    int a, b;
+    in >> a >> b;
+    if (a > 0) {
+      avl_tree.Insert(a);
+    } else {
+      avl_tree.Erase(a * (-1));
+    }
+    out << avl_tree.GetKth(b) << ' ';
   }
 }
 
@@ -226,15 +239,22 @@ void TestContest() {
   {
     std::stringstream in;
     std::stringstream out;
+    in << "3 1 0 2 0 -1 0 " << std::endl;
+    Run(in, out);
+    assert(out.str() == "1 1 2 ");
+  }
+  {
+    std::stringstream in;
+    std::stringstream out;
     in << "5 40 0 10 1 4 1 -10 0 50 2" << std::endl;
     Run(in, out);
-    assert(out.str() == "40 40 10 4 50");
+    assert(out.str() == "40 40 10 4 50 ");
   }
   std::cout << "TestContest: SUCCESS" << std::endl;
 }
 
 int main() {
   TestContest();
-  // Run(std::cin, std::cout);
+  // Run(std::cin,  std::cout);
   return 0;
 }
