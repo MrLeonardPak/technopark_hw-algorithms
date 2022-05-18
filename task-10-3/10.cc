@@ -17,7 +17,6 @@
  */
 #include <cassert>
 #include <iostream>
-#include <limits>
 #include <queue>
 #include <sstream>
 #include <vector>
@@ -35,7 +34,10 @@ class BTree {
     std::vector<Node*> children;
 
     Node(bool is_leaf) : leaf(is_leaf) {}
-    // TODO
+
+    Node(Node const&) = delete;
+    Node& operator=(Node const&) = delete;
+
     ~Node() {
       for (auto node : children) {
         delete node;
@@ -46,10 +48,11 @@ class BTree {
  public:
   BTree(size_t min_degree, Comparator comp = Comparator())
       : t_(min_degree), comp_(comp) {}
-  // TODO
-  ~BTree() { delete root_; }
 
-  bool Find(Key const& key) { return FindAux(key, root_); }
+  BTree(BTree const&) = delete;
+  BTree& operator=(BTree const&) = delete;
+
+  ~BTree() { delete root_; }
 
   void Insert(Key const& key) {
     if (root_ == nullptr) {
@@ -122,7 +125,7 @@ class BTree {
     node->children[idx + 1] = z_node;
 
     node->keys.resize(node->keys.size() + 1);
-    for (size_t j = node->keys.size() - 1; j > idx + 1; --j) {
+    for (size_t j = node->keys.size() - 1; j > idx; --j) {
       node->keys[j] = node->keys[j - 1];
     }
     node->keys[idx] = y_node->keys[t_ - 1];
@@ -130,36 +133,22 @@ class BTree {
     y_node->keys.resize(t_ - 1);
   }
 
-  bool FindAux(Key const& key, Node* node) {
-    int i = 0;
-    while ((i < node->keys.size() && (key > node->keys[i]))) {
-      ++i;
-    }
-    if ((i < node->keys.size()) && (key == node->keys[i])) {
-      return true;
-    } else if (node->leaf) {
-      return false;
-    } else {
-      return FindAux(key, node->children[i]);
-    }
-  }
-
   void InsertAux(Key const& key, Node* node) {
     int pos = node->keys.size() - 1;
     if (node->leaf) {
       node->keys.resize(node->keys.size() + 1);
-      while ((pos >= 0) && (key < node->keys[pos])) {
+      while ((pos >= 0) && (comp_(key, node->keys[pos]))) {
         node->keys[pos + 1] = node->keys[pos];
         --pos;
       }
       node->keys[pos + 1] = key;
     } else {
-      while ((pos >= 0) && (key < node->keys[pos])) {
+      while ((pos >= 0) && (comp_(key, node->keys[pos]))) {
         --pos;
       }
       if (IsFull(node->children[pos + 1])) {
         Split(node, pos + 1);
-        if (key > node->keys[pos + 1]) {
+        if (comp_(node->keys[pos + 1], key)) {
           ++pos;
         }
       }
@@ -173,8 +162,8 @@ class BTree {
 void Run(std::istream& in, std::ostream& out) {
   size_t n = 0;
   in >> n;
-  auto b_tree = BTree<int>(n);
-  int key = 0;
+  auto b_tree = BTree<unsigned int>(n);
+  unsigned int key = 0;
   while (in >> key) {
     b_tree.Insert(key);
   }
