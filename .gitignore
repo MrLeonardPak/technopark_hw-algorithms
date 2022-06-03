@@ -13,5 +13,8 @@
 # Ignore build folder
 */build
 
+# Ignore cline folder
+*/.idea
+
 # Ignore tests
 **/test**.**
