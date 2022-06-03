@@ -1,3 +1,15 @@
+/**
+ * @file 13-2.cc
+ * @author Leonard Pak
+ * @brief Дан невзвешенный неориентированный граф. В графе может быть несколько
+ * кратчайших путей между какими-то вершинами. Найдите количество различных
+ * кратчайших путей между заданными вершинами. Требования: сложность O(V+E).
+ * @version 0.1
+ * @date 2022-06-03
+ *
+ * @copyright Copyright (c) 2022
+ *
+ */
 #include <cassert>
 #include <functional>
 #include <iostream>
@@ -15,13 +27,11 @@ struct IGraph {
   virtual size_t VerticesCount() const = 0;
 
   virtual std::vector<int> GetNextVertices(int vertex) const = 0;
-  virtual std::vector<int> GetPrevVertices(int vertex) const = 0;
 };
 
 class ListGraph : public IGraph {
  public:
   ListGraph(int size);
-  ListGraph(IGraph const& graph);
   ~ListGraph() = default;
 
   // Добавление ребра от from к to.
@@ -30,31 +40,14 @@ class ListGraph : public IGraph {
   size_t VerticesCount() const override;
 
   std::vector<int> GetNextVertices(int vertex) const override;
-  std::vector<int> GetPrevVertices(int vertex) const override;
 
  private:
   std::vector<std::vector<int>> graph_;
-  std::vector<std::vector<int>> reverse_graph_;
 };
 
-ListGraph::ListGraph(int size) : graph_(size), reverse_graph_(size) {}
-
-ListGraph::ListGraph(IGraph const& graph) {
-  graph_.reserve(graph.VerticesCount());
-  graph_.reserve(graph.VerticesCount());
-  for (size_t i = 0; i < graph.VerticesCount(); ++i) {
-    graph_[i] = graph.GetNextVertices(i);
-    auto tmp_vert = graph.GetPrevVertices(i);
-    for (size_t j = 0; j < tmp_vert.size(); ++j) {
-      reverse_graph_[tmp_vert[j]].push_back(i);
-    }
-  }
-}
+ListGraph::ListGraph(int size) : graph_(size) {}
 
 void ListGraph::AddEdge(int from, int to) {
-  assert(from < graph_.size());
-  assert(to < graph_.size());
-
   graph_[from].push_back(to);
   graph_[to].push_back(from);
 }
@@ -64,17 +57,7 @@ size_t ListGraph::VerticesCount() const {
 }
 
 std::vector<int> ListGraph::GetNextVertices(int vertex) const {
-  assert(vertex < graph_.size());
-
   auto result = std::vector<int>(graph_[vertex].begin(), graph_[vertex].end());
-  return result;
-}
-
-std::vector<int> ListGraph::GetPrevVertices(int vertex) const {
-  assert(vertex < graph_.size());
-
-  auto result = std::vector<int>(reverse_graph_[vertex].begin(),
-                                 reverse_graph_[vertex].end());
   return result;
 }
 
@@ -82,12 +65,10 @@ size_t BFS(IGraph const& graph, int start_vertex, int end_vertex) {
   auto vertex_queue = std::queue<int>();
   auto dist =
       std::vector<int>(graph.VerticesCount(), std::numeric_limits<int>::max());
-  // auto parent = std::vector<int>(graph.VerticesCount());
   auto path_count = std::vector<size_t>(graph.VerticesCount());
 
   vertex_queue.push(start_vertex);
   dist[start_vertex] = 0;
-  // parent[start_vertex] = -1;
   path_count[start_vertex] = 1;
   while (!vertex_queue.empty()) {
     int current = vertex_queue.front();
@@ -98,7 +79,6 @@ size_t BFS(IGraph const& graph, int start_vertex, int end_vertex) {
       if (dist[child] > dist[current] + 1) {
         vertex_queue.push(child);
         dist[child] = dist[current] + 1;
-        // parent[child] = current;
         path_count[child] = path_count[current];
       } else if (dist[child] == dist[current] + 1) {
         path_count[child] += path_count[current];
