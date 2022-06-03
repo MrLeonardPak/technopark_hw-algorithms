@@ -1,11 +1,10 @@
 #include "list_graph.h"
 
+#include <cassert>
+
 namespace technopark::algorithms::graph {
 
-ListGraph::ListGraph(std::size_t size) {
-  graph_.resize(size);
-  reverse_graph_.resize(size);
-}
+ListGraph::ListGraph(std::size_t size) : graph_(size), reverse_graph_(size) {}
 
 ListGraph::ListGraph(IGraph const& graph) {
   graph_.reserve(graph.VerticesCount());
@@ -20,21 +19,28 @@ ListGraph::ListGraph(IGraph const& graph) {
 }
 
 void ListGraph::AddEdge(size_t from, size_t to) {
+  assert(from < graph_.size());
+  assert(to < graph_.size());
+
   graph_[from].push_back(to);
   reverse_graph_[to].push_back(from);
 }
 
-int ListGraph::VerticesCount() const {
+size_t ListGraph::VerticesCount() const {
   return graph_.size();
 }
 
 std::vector<size_t> ListGraph::GetNextVertices(size_t vertex) const {
+  assert(vertex < graph_.size());
+
   auto result =
       std::vector<size_t>(graph_[vertex].begin(), graph_[vertex].end());
   return result;
 }
 
 std::vector<size_t> ListGraph::GetPrevVertices(size_t vertex) const {
+  assert(vertex < graph_.size());
+
   auto result = std::vector<size_t>(reverse_graph_[vertex].begin(),
                                     reverse_graph_[vertex].end());
   return result;

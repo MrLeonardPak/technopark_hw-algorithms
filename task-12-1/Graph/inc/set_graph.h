@@ -1,15 +1,17 @@
-#ifndef ALGORITHMS_LIST_GRAPH_H
-#define ALGORITHMS_LIST_GRAPH_H
+#ifndef ALGORITHMS_SET_GRAPH_H
+#define ALGORITHMS_SET_GRAPH_H
 
 #include "igraph.h"
 
+#include <set>
+
 namespace technopark::algorithms::graph {
 
-class ListGraph : public IGraph {
+class SetGraph : public IGraph {
  public:
-  ListGraph(size_t size);
-  ListGraph(IGraph const& graph);
-  ~ListGraph() = default;
+  SetGraph(size_t size);
+  SetGraph(IGraph const& graph);
+  ~SetGraph() = default;
 
   // Добавление ребра от from к to.
   void AddEdge(size_t from, size_t to) override;
@@ -20,10 +22,9 @@ class ListGraph : public IGraph {
   std::vector<size_t> GetPrevVertices(size_t vertex) const override;
 
  private:
-  std::vector<std::vector<size_t>> graph_;
-  std::vector<std::vector<size_t>> reverse_graph_;
+  std::vector<std::set<size_t>> graph_;
 };
 
 }  // namespace technopark::algorithms::graph
 
-#endif  // ALGORITHMS_LIST_GRAPH_H
+#endif  // ALGORITHMS_SET_GRAPH_H
