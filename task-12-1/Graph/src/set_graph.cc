@@ -8,7 +8,7 @@ SetGraph::SetGraph(size_t size) : graph_(size) {}
 
 SetGraph::SetGraph(IGraph const& graph)
     : graph_(graph.VerticesCount(), std::set<size_t>()) {
-  for (size_t i{0}; i < graph.VerticesCount(); i++) {
+  for (size_t i = 0; i < graph.VerticesCount(); i++) {
     for (auto& vertex : graph.GetNextVertices(i)) {
       graph_[i].insert(vertex);
     }

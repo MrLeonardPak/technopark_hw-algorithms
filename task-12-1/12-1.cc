@@ -13,7 +13,6 @@
  * @copyright Copyright (c) 2022
  *
  */
-
 #include "arc_graph.h"
 #include "list_graph.h"
 #include "matrix_graph.h"
