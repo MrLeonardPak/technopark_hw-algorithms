@@ -13,7 +13,7 @@
 # Ignore build folder
 */build
 
-# Ignore cline folder
+# Ignore clion folder
 */.idea
 
 # Ignore tests
