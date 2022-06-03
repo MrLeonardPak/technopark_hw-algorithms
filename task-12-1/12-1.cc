@@ -1,3 +1,19 @@
+/**
+ * @file 12-1.cc
+ * @author Leonard Pak
+ * @brief Необходимо написать несколько реализаций интерфейса:
+ * ListGraph, хранящий граф в виде массива списков смежности,
+ * MatrixGraph, хранящий граф в виде матрицы смежности,
+ * SetGraph, хранящий граф в виде массива хэш-таблиц/сбалансированных деревьев
+ * поиска,
+ * ArcGraph, хранящий граф в виде одного массива пар {from, to}.
+ * @version 0.1
+ * @date 2022-06-03
+ *
+ * @copyright Copyright (c) 2022
+ *
+ */
+
 #include "arc_graph.h"
 #include "list_graph.h"
 #include "matrix_graph.h"
