@@ -61,7 +61,7 @@ void Run() {
   graph::IGraph::BFS(matrix_graph, 0, print_out);
   std::cout << std::endl;
 
-  auto set_graph = graph::SetGraph(list_graph);
+  auto set_graph = graph::SetGraph(matrix_graph);
   std::cout << "Set Graph:" << std::endl;
   std::cout << "DFS: ";
   graph::IGraph::DFS(set_graph, 0, print_out);
@@ -70,7 +70,7 @@ void Run() {
   graph::IGraph::BFS(set_graph, 0, print_out);
   std::cout << std::endl;
 
-  auto arc_graph = graph::ArcGraph(list_graph);
+  auto arc_graph = graph::ArcGraph(set_graph);
   std::cout << "Arc Graph:" << std::endl;
   std::cout << "DFS: ";
   graph::IGraph::DFS(arc_graph, 0, print_out);
