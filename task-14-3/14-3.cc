@@ -17,7 +17,7 @@
 #include <cassert>
 #include <iostream>
 #include <limits>
-#include <queue>
+#include <set>
 #include <sstream>
 #include <vector>
 
@@ -52,27 +52,26 @@ std::vector<std::pair<int, int>> ListGraph::GetNextVertices(int vertex) const {
   return graph_[vertex];
 }
 
-size_t Dijkstra(ListGraph const& graph,
-                size_t start_vertex,
-                size_t end_vertex) {
-  auto dist = std::vector<size_t>(graph.VerticesCount(),
-                                  std::numeric_limits<size_t>::max());
+int Dijkstra(ListGraph const& graph, int start_vertex, int end_vertex) {
+  auto dist =
+      std::vector<int>(graph.VerticesCount(), std::numeric_limits<int>::max());
   dist[start_vertex] = 0;
-  auto vertex_queue = std::queue<std::pair<int, int>>();
-  vertex_queue.push(std::make_pair(0, start_vertex));
-  while (!vertex_queue.empty()) {
-    std::pair<int, int> current = vertex_queue.front();
-    vertex_queue.pop();
+  auto vertex_set = std::set<std::pair<int, int>>();
+  vertex_set.insert(std::make_pair(0, start_vertex));
+  while (!vertex_set.empty()) {
+    std::pair<int, int> current = *vertex_set.begin();
+    vertex_set.erase(vertex_set.begin());
     if (dist[current.second] < current.first) {
       continue;
     }
     for (std::pair<int, int> next : graph.GetNextVertices(current.second)) {
-      if (dist[next.second] == std::numeric_limits<size_t>::max()) {
+      if (dist[next.second] == std::numeric_limits<int>::max()) {
         dist[next.second] = dist[current.second] + next.first;
-        vertex_queue.push(std::make_pair(next.first, next.second));
+        vertex_set.insert(std::make_pair(next.first, next.second));
       } else if (dist[current.second] + next.first < dist[next.second]) {
+        vertex_set.erase(std::make_pair(dist[next.second], next.second));
         dist[next.second] = dist[current.second] + next.first;
-        vertex_queue.push(std::make_pair(dist[next.second], next.second));
+        vertex_set.insert(std::make_pair(dist[next.second], next.second));
       }
     }
   }
@@ -84,11 +83,11 @@ void Run(std::istream& in, std::ostream& out) {
   in >> n >> m;
   auto graph = ListGraph(n);
   for (size_t i = 0; i < m; ++i) {
-    size_t from, to, weight;
+    int from, to, weight;
     in >> from >> to >> weight;
     graph.AddEdge(from, to, weight);
   }
-  size_t start, end;
+  int start, end;
   in >> start >> end;
   out << Dijkstra(graph, start, end) << std::endl;
 }
@@ -117,7 +116,7 @@ void TestContest() {
 }
 
 int main() {
-  Run(std::cin, std::cout);
-  // TestContest();
+  // Run(std::cin, std::cout);
+  TestContest();
   return 0;
 }
